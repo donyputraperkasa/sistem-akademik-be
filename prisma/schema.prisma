@@ -1,0 +1,130 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql" // atau mysql jika kamu pakai MySQL
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------
+// ENUM
+// ----------------------
+enum Role {
+  KEPALA_SEKOLAH
+  GURU
+  SISWA
+}
+
+enum AttendanceStatus {
+  HADIR
+  TIDAK_HADIR
+}
+
+// ----------------------
+// MODEL
+// ----------------------
+model User {
+  id        String   @id @default(cuid())
+  nisnip    String?  @unique
+  username  String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi ke Teacher/Student
+  teacher Teacher?
+  student Student?
+}
+
+// ----------------------
+// Guru
+// ----------------------
+model Teacher {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  mapel       String
+  user        User         @relation(fields: [userId], references: [id])
+  grades      Grade[]
+  attendances Attendance[]
+  tasks       Task[]
+}
+
+// ----------------------
+// Siswa
+// ----------------------
+model Student {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  kelas       String
+  user        User         @relation(fields: [userId], references: [id])
+  grades      Grade[]
+  attendances Attendance[]
+  tasks       Task[]
+}
+
+// ----------------------
+// Nilai
+// ----------------------
+model Grade {
+  id        String   @id @default(cuid())
+  subject   String
+  value     Float
+  teacherId String
+  studentId String
+  createdAt DateTime @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+// ----------------------
+// Absensi
+// ----------------------
+model Attendance {
+  id        String           @id @default(cuid())
+  status    AttendanceStatus
+  date      DateTime         @default(now())
+  teacherId String
+  studentId String
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+// ----------------------
+// Pengumuman
+// ----------------------
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  createdBy String // id kepala sekolah
+}
+
+// ----------------------
+// Tugas
+// ----------------------
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  dueDate     DateTime
+  teacherId   String
+  studentId   String
+  status      TaskStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+enum TaskStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+}
