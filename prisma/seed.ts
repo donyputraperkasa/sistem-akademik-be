@@ -31,7 +31,7 @@ async function main() {
     const guru1User = await prisma.user.create({
         data: {
         nisnip: 'G001',
-        username: 'mas dony',
+        username: 'masdony',
         password,
         role: Role.GURU,
         },
@@ -47,7 +47,7 @@ async function main() {
     const guru2User = await prisma.user.create({
         data: {
         nisnip: 'G002',
-        username: 'dek adera',
+        username: 'dekadera',
         password,
         role: Role.GURU,
         },

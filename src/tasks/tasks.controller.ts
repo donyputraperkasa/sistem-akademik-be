@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -9,26 +9,29 @@ import { Roles } from '../auth/roles.decorator';
 export class TasksController {
     constructor(private tasksService: TasksService) {}
 
-    // 👨‍🏫 Guru membuat tugas
-    @Post('create')
-    @Roles('GURU')
-    async createTask(
-        @Req() req,
-        @Body() body: { studentId: string; title: string; description: string; dueDate: string },
-    ) {
-        const teacherId = req.user.teacherId || req.user.userId;
-        return this.tasksService.createTask(teacherId, body.studentId, body.title, body.description, new Date(body.dueDate));
-    }
-
-    // 👨‍🏫 Guru melihat tugas yang ia buat
-    @Get('by-teacher')
+    // 👨‍🏫 Guru lihat semua tugas yang dibuatnya
+    @Get()
     @Roles('GURU')
     async getByTeacher(@Req() req) {
         const teacherId = req.user.teacherId || req.user.userId;
         return this.tasksService.getTasksByTeacher(teacherId);
     }
 
-    // 👨‍🎓 Siswa melihat tugas miliknya
+    // 👨‍🏫 Guru membuat tugas
+    @Post('create')
+    @Roles('GURU')
+    async create(@Req() req, @Body() body: { studentId: string; title: string; description: string; dueDate: string }) {
+        const teacherId = req.user.teacherId || req.user.userId;
+        return this.tasksService.createTask(
+        teacherId,
+        body.studentId,
+        body.title,
+        body.description,
+        new Date(body.dueDate),
+        );
+    }
+
+    // 👨‍🎓 Siswa melihat tugas mereka
     @Get('by-student')
     @Roles('SISWA')
     async getByStudent(@Req() req) {
@@ -36,7 +39,7 @@ export class TasksController {
         return this.tasksService.getTasksForStudent(studentId);
     }
 
-    // 👨‍🎓 Siswa mengirim tugas
+    // 👨‍🎓 Siswa mengumpulkan tugas
     @Patch(':id/submit')
     @Roles('SISWA')
     async submit(@Param('id') id: string) {

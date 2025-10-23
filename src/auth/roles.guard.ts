@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+    Injectable,
+    CanActivate,
+    ExecutionContext,
+    ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from './roles.decorator';
 
@@ -11,12 +16,20 @@ export class RolesGuard implements CanActivate {
         context.getHandler(),
         context.getClass(),
         ]);
+
         if (!requiredRoles) return true;
 
-        const { user } = context.switchToHttp().getRequest();
-        if (!requiredRoles.includes(user.role)) {
-        throw new ForbiddenException('Akses ditolak: role tidak sesuai');
+        const request = context.switchToHttp().getRequest();
+        const user = request.user;
+
+        if (!user) {
+        throw new ForbiddenException('Tidak ada user di request (JWT mungkin tidak valid)');
         }
-        return true;
+
+        if (!requiredRoles.includes(user.role)) {
+        throw new ForbiddenException(`Akses ditolak untuk role: ${user.role}`);
+        }
+
+        return true; // ✅ tambahkan return supaya tidak error TS
     }
 }

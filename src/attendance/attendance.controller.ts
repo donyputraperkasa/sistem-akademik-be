@@ -9,25 +9,31 @@ import { Roles } from '../auth/roles.decorator';
 export class AttendanceController {
     constructor(private attendanceService: AttendanceService) {}
 
-    // 👨‍🏫 Guru memberi absensi
+    // 👨‍🏫 Guru lihat absensi yang dia buat (FE pakai ini)
+    @Get()
+    @Roles('GURU')
+    async getAll(@Req() req) {
+        const teacherId = req.user.teacherId || req.user.userId;
+        return this.attendanceService.getAttendanceByTeacher(teacherId);
+    }
+
+    // 👨‍🏫 Guru menandai absensi
     @Post('mark')
     @Roles('GURU')
-    async mark(
-        @Req() req,
-        @Body() body: { studentId: string; status: string },
-    ) {
+    async mark(@Req() req, @Body() body: { studentId: string; status: string }) {
         const teacherId = req.user.teacherId || req.user.userId;
         return this.attendanceService.markAttendance(teacherId, body.studentId, body.status);
     }
 
-    // 👨‍🎓 Siswa lihat absensi sendiri
+    // 👨‍🎓 Siswa lihat absensi mereka sendiri
     @Get('me')
     @Roles('SISWA')
     async myAttendance(@Req() req) {
-        return this.attendanceService.getAttendanceByStudent(req.user.studentId || req.user.userId);
+        const studentId = req.user.studentId || req.user.userId;
+        return this.attendanceService.getAttendanceByStudent(studentId);
     }
 
-    // 👩‍💼 Kepala sekolah lihat semua absensi
+    // 🧑‍💼 Kepala sekolah lihat seluruh absensi
     @Get('all')
     @Roles('KEPALA_SEKOLAH')
     async allAttendance() {

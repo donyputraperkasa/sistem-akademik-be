@@ -1,36 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TaskStatus } from '@prisma/client';
 
 @Injectable()
 export class TasksService {
     constructor(private prisma: PrismaService) {}
 
-    // 👨‍🏫 Guru membuat tugas
+    // 👨‍🏫 Guru membuat tugas baru
     async createTask(teacherId: string, studentId: string, title: string, description: string, dueDate: Date) {
         return this.prisma.task.create({
         data: {
+            teacherId,
+            studentId,
             title,
             description,
             dueDate,
-            teacherId,
-            studentId,
+            status: 'PENDING',
         },
         });
     }
 
-    // 👨‍🎓 Siswa lihat semua tugas miliknya
-    async getTasksForStudent(studentId: string) {
-        return this.prisma.task.findMany({
-        where: { studentId },
-        include: {
-            teacher: { include: { user: true } },
-        },
-        orderBy: { dueDate: 'asc' },
-        });
-    }
-
-    // 👨‍🏫 Guru lihat semua tugas yang ia berikan
+    // 👨‍🏫 Guru melihat semua tugas yang dia buat
     async getTasksByTeacher(teacherId: string) {
         return this.prisma.task.findMany({
         where: { teacherId },
@@ -41,23 +30,34 @@ export class TasksService {
         });
     }
 
-    // 👨‍🎓 Siswa mengirim tugas
+    // 👨‍🎓 Siswa melihat tugas mereka sendiri
+    async getTasksForStudent(studentId: string) {
+        return this.prisma.task.findMany({
+        where: { studentId },
+        include: {
+            teacher: { include: { user: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    // 👨‍🎓 Siswa mengumpulkan tugas
     async submitTask(taskId: string) {
         return this.prisma.task.update({
         where: { id: taskId },
-        data: { status: TaskStatus.SUBMITTED },
+        data: { status: 'SUBMITTED' },
         });
     }
 
-    // 👨‍🏫 Guru memberi nilai ke tugas
+    // 👨‍🏫 Guru memberi nilai tugas
     async gradeTask(taskId: string) {
         return this.prisma.task.update({
         where: { id: taskId },
-        data: { status: TaskStatus.GRADED },
+        data: { status: 'GRADED' },
         });
     }
 
-    // 🧑‍💼 Kepala sekolah lihat semua tugas
+    // 🧑‍💼 Kepala sekolah melihat semua tugas
     async getAllTasks() {
         return this.prisma.task.findMany({
         include: {
