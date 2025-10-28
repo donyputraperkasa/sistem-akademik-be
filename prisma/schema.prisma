@@ -33,20 +33,17 @@ enum TaskStatus {
 // MODEL
 // ----------------------
 model User {
-  id        String   @id @default(cuid())
-  nisnip    String?  @unique
-  username  String   @unique
-  password  String
-  role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relasi ke Teacher/Student
-  teacher Teacher?
-  student Student?
-
-  // 🆕 Relasi ke Comment
-  comments Comment[]
+  id             String          @id @default(cuid())
+  nisnip         String?         @unique
+  username       String          @unique
+  password       String
+  role           Role
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  teacher        Teacher?
+  student        Student?
+  comments       Comment[]
+  announcements  Announcement[]  // ✅ tambahkan relasi balik
 }
 
 // ----------------------
@@ -108,11 +105,12 @@ model Attendance {
 // Pengumuman
 // ----------------------
 model Announcement {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-  createdBy String
+  id            String   @id @default(cuid())
+  title         String
+  content       String
+  createdAt     DateTime @default(now())
+  createdBy     String
+  createdByUser User     @relation(fields: [createdBy], references: [id]) // ✅ tambahkan ini
 }
 
 // ----------------------
@@ -126,12 +124,14 @@ model Task {
   teacherId   String
   studentId   String
   status      TaskStatus @default(PENDING)
+  filePath    String?    // ✅ baru
+  submittedAt DateTime?  // ✅ baru
+  grade       Float?     // ✅ baru
   createdAt   DateTime   @default(now())
 
   teacher Teacher @relation(fields: [teacherId], references: [id])
   student Student @relation(fields: [studentId], references: [id])
 
-  // 🆕 Relasi ke Comment
   comments Comment[]
 }
 

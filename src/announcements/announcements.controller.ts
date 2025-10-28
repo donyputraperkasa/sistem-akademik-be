@@ -13,8 +13,8 @@ export class AnnouncementsController {
     @Post()
     @Roles('KEPALA_SEKOLAH')
     async create(@Req() req, @Body() body: { title: string; content: string }) {
-        const createdBy = req.user.id;
-        return this.announcementsService.createAnnouncement(body.title, body.content, createdBy);
+    const createdBy = req.user.id; // sudah string
+    return this.announcementsService.createAnnouncement(body.title, body.content, createdBy);
     }
 
     // 👨‍🏫 👨‍🎓 Semua role bisa lihat pengumuman

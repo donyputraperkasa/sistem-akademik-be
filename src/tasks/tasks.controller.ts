@@ -1,62 +1,90 @@
-import { Controller, Get, Post, Patch, Body, Param, Req, UseGuards } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Patch,
+    Delete,
+    Param,
+    Body,
+    Req,
+    UseGuards,
+    UploadedFile,
+    UseInterceptors,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Express } from 'express';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TasksController {
-    constructor(private tasksService: TasksService) {}
+    constructor(private readonly tasksService: TasksService) {}
 
-    // 👨‍🏫 Guru lihat semua tugas yang dibuatnya
+    // 🟢 Guru & Kepsek lihat semua tugas
     @Get()
-    @Roles('GURU')
-    async getByTeacher(@Req() req) {
-        const teacherId = req.user.teacherId || req.user.userId;
-        return this.tasksService.getTasksByTeacher(teacherId);
+    @Roles(Role.GURU, Role.KEPALA_SEKOLAH)
+    findAll() {
+        return this.tasksService.findAll();
     }
 
-    // 👨‍🏫 Guru membuat tugas
-    @Post('create')
-    @Roles('GURU')
-    async create(@Req() req, @Body() body: { studentId: string; title: string; description: string; dueDate: string }) {
-        const teacherId = req.user.teacherId || req.user.userId;
-        return this.tasksService.createTask(
-        teacherId,
-        body.studentId,
-        body.title,
-        body.description,
-        new Date(body.dueDate),
-        );
+    // 🟡 Siswa lihat tugasnya sendiri
+    @Get('student')
+    @Roles(Role.SISWA)
+    findForStudent(@Req() req) {
+        const siswaId = req.user.id;
+        return this.tasksService.findByStudent(siswaId);
     }
 
-    // 👨‍🎓 Siswa melihat tugas mereka
-    @Get('by-student')
-    @Roles('SISWA')
-    async getByStudent(@Req() req) {
-        const studentId = req.user.studentId || req.user.userId;
-        return this.tasksService.getTasksForStudent(studentId);
+    // 🟢 Semua role bisa lihat detail tugas
+    @Get(':id')
+    @Roles(Role.SISWA, Role.GURU, Role.KEPALA_SEKOLAH)
+    findOne(@Param('id') id: string) {
+        return this.tasksService.findOne(id);
     }
 
-    // 👨‍🎓 Siswa mengumpulkan tugas
-    @Patch(':id/submit')
-    @Roles('SISWA')
-    async submit(@Param('id') id: string) {
-        return this.tasksService.submitTask(id);
+    // 🟢 Guru membuat tugas
+    @Post()
+    @Roles(Role.GURU)
+    create(@Req() req, @Body() dto: any) {
+        const guruId = req.user.id;
+        return this.tasksService.create(guruId, dto);
     }
 
-    // 👨‍🏫 Guru memberi nilai tugas
+    // 🟢 Guru update tugas
+    @Patch(':id')
+    @Roles(Role.GURU)
+    update(@Param('id') id: string, @Body() dto: any) {
+        return this.tasksService.update(id, dto);
+    }
+
+    // 🔵 Guru beri nilai ke tugas
     @Patch(':id/grade')
-    @Roles('GURU')
-    async grade(@Param('id') id: string) {
-        return this.tasksService.gradeTask(id);
+    @Roles(Role.GURU)
+    gradeTask(@Param('id') id: string, @Body() body: { grade: number }) {
+        return this.tasksService.gradeTask(id, body.grade);
     }
 
-    // 🧑‍💼 Kepala sekolah melihat seluruh tugas
-    @Get('all')
-    @Roles('KEPALA_SEKOLAH')
-    async getAll() {
-        return this.tasksService.getAllTasks();
+    // 🟡 Siswa upload jawaban
+    @Post(':id/submit')
+    @Roles(Role.SISWA)
+    @UseInterceptors(FileInterceptor('file'))
+    submitTask(
+        @Param('id') id: string,
+        @UploadedFile() file: Express.Multer.File,
+        @Req() req,
+    ) {
+        const siswaId = req.user.id;
+        return this.tasksService.submitTask(id, siswaId, file);
+    }
+
+    // 🔴 Guru hapus tugas
+    @Delete(':id')
+    @Roles(Role.GURU)
+    remove(@Param('id') id: string) {
+        return this.tasksService.remove(id);
     }
 }

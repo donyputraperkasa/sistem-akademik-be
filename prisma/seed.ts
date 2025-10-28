@@ -1,151 +1,149 @@
-import { PrismaClient, Role, AttendanceStatus, TaskStatus } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { PrismaClient, Role, TaskStatus } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// 🔧 Fungsi pembuat NIS/NIP otomatis
+function generateNISN(role: Role, index: number): string {
+    if (role === Role.GURU) return `G${String(index).padStart(3, '0')}`;
+    if (role === Role.SISWA) return `S${String(index).padStart(3, '0')}`;
+    return `A${String(index).padStart(3, '0')}`; // untuk kepala sekolah/admin
+}
+
 async function main() {
-    console.log('🌱 Starting database seeding...');
+    console.log('🚀 Seeding database dimulai...\n');
 
-    // Hapus data lama (optional, hanya untuk development)
-    await prisma.task.deleteMany();
-    await prisma.attendance.deleteMany();
-    await prisma.grade.deleteMany();
-    await prisma.teacher.deleteMany();
-    await prisma.student.deleteMany();
-    await prisma.user.deleteMany();
+    const passwordHash = await bcrypt.hash('password123', 10);
 
-    // Password hash
-    const password = await bcrypt.hash('admin123', 10);
-
-    // 🧑‍💼 Kepala Sekolah
-    const kepsek = await prisma.user.create({
-        data: {
-        nisnip: '0001',
+    // -----------------------------
+    // 1️⃣ Buat akun pengguna
+    // -----------------------------
+    const kepalaSekolah = await prisma.user.upsert({
+        where: { username: 'kepsek' },
+        update: {},
+        create: {
+        nisnip: generateNISN(Role.KEPALA_SEKOLAH, 1),
         username: 'kepsek',
-        password,
+        password: passwordHash,
         role: Role.KEPALA_SEKOLAH,
         },
     });
 
-    // 👨‍🏫 Guru 1
-    const guru1User = await prisma.user.create({
-        data: {
-        nisnip: 'G001',
-        username: 'masdony',
-        password,
+    const guruUser = await prisma.user.upsert({
+        where: { username: 'guru' },
+        update: {},
+        create: {
+        nisnip: generateNISN(Role.GURU, 1),
+        username: 'guru',
+        password: passwordHash,
         role: Role.GURU,
         },
     });
-    const guru1 = await prisma.teacher.create({
-        data: {
-        userId: guru1User.id,
+
+    const guru = await prisma.teacher.upsert({
+        where: { userId: guruUser.id },
+        update: {},
+        create: {
+        userId: guruUser.id,
         mapel: 'Matematika',
         },
     });
 
-    // 👨‍🏫 Guru 2
-    const guru2User = await prisma.user.create({
-        data: {
-        nisnip: 'G002',
-        username: 'dekadera',
-        password,
-        role: Role.GURU,
-        },
-    });
-    const guru2 = await prisma.teacher.create({
-        data: {
-        userId: guru2User.id,
-        mapel: 'Bahasa Indonesia',
-        },
-    });
-
-    // 👨‍🎓 Siswa 1
-    const siswa1User = await prisma.user.create({
-        data: {
-        nisnip: 'S001',
-        username: 'siswa_andi',
-        password,
+    const siswaUser1 = await prisma.user.upsert({
+        where: { username: 'siswa' },
+        update: {},
+        create: {
+        nisnip: generateNISN(Role.SISWA, 1),
+        username: 'siswa',
+        password: passwordHash,
         role: Role.SISWA,
         },
     });
-    const siswa1 = await prisma.student.create({
-        data: {
-        userId: siswa1User.id,
-        kelas: '9A',
+
+    const siswa1 = await prisma.student.upsert({
+        where: { userId: siswaUser1.id },
+        update: {},
+        create: {
+        userId: siswaUser1.id,
+        kelas: '8A',
         },
     });
 
-    // 👨‍🎓 Siswa 2
-    const siswa2User = await prisma.user.create({
-        data: {
-        nisnip: 'S002',
-        username: 'siswa_budi',
-        password,
+    const siswaUser2 = await prisma.user.upsert({
+        where: { username: 'siswi' },
+        update: {},
+        create: {
+        nisnip: generateNISN(Role.SISWA, 2),
+        username: 'siswi',
+        password: passwordHash,
         role: Role.SISWA,
         },
     });
-    const siswa2 = await prisma.student.create({
-        data: {
-        userId: siswa2User.id,
-        kelas: '9A',
+
+    const siswa2 = await prisma.student.upsert({
+        where: { userId: siswaUser2.id },
+        update: {},
+        create: {
+        userId: siswaUser2.id,
+        kelas: '8A',
         },
     });
 
-    // 👨‍🎓 Siswa 3
-    const siswa3User = await prisma.user.create({
+    console.log('✅ User, guru, dan siswa berhasil dibuat!\n');
+
+    // -----------------------------
+    // 2️⃣ Buat tugas contoh
+    // -----------------------------
+    const tugas1 = await prisma.task.create({
         data: {
-        nisnip: 'S003',
-        username: 'siswa_cici',
-        password,
-        role: Role.SISWA,
-        },
-    });
-    const siswa3 = await prisma.student.create({
-        data: {
-        userId: siswa3User.id,
-        kelas: '9B',
+        title: 'Latihan Persamaan Linear',
+        description: 'Kerjakan 10 soal tentang persamaan linear dua variabel.',
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        teacherId: guru.id,
+        studentId: siswa1.id,
+        status: TaskStatus.PENDING,
         },
     });
 
-    // 📚 Tugas-tugas contoh
-    await prisma.task.createMany({
-        data: [
-        {
-            title: 'Tugas Aljabar',
-            description: 'Kerjakan soal di buku halaman 32',
-            dueDate: new Date('2025-10-30'),
-            teacherId: guru1.id,
-            studentId: siswa1.id,
-            status: TaskStatus.PENDING,
+    const tugas2 = await prisma.task.create({
+        data: {
+        title: 'Luas Bangun Datar',
+        description: 'Buat laporan pengukuran luas berbagai bangun datar.',
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        teacherId: guru.id,
+        studentId: siswa2.id,
+        status: TaskStatus.PENDING,
         },
-        {
-            title: 'Menulis Puisi',
-            description: 'Buat puisi bertema kemerdekaan minimal 3 bait',
-            dueDate: new Date('2025-10-25'),
-            teacherId: guru2.id,
-            studentId: siswa2.id,
-            status: TaskStatus.SUBMITTED,
-        },
-        {
-            title: 'Tugas Statistik',
-            description: 'Analisis data nilai ujian matematika kelas 9A',
-            dueDate: new Date('2025-11-02'),
-            teacherId: guru1.id,
-            studentId: siswa3.id,
-            status: TaskStatus.GRADED,
-        },
-        ],
     });
 
-    console.log('✅ Seeding selesai!');
+    console.log('📘 Contoh tugas berhasil dibuat:\n');
+    console.table([
+        { title: tugas1.title, untuk: 'siswa' },
+        { title: tugas2.title, untuk: 'siswi' },
+    ]);
+
+    // -----------------------------
+    // 3️⃣ Pengumuman awal
+    // -----------------------------
+    const pengumuman = await prisma.announcement.create({
+        data: {
+        title: 'Ujian Tengah Semester',
+        content: 'UTS akan dilaksanakan minggu depan, persiapkan diri kalian!',
+        createdBy: kepalaSekolah.id,
+        },
+    });
+
+    console.log('\n📢 Pengumuman dibuat:', pengumuman.title);
+    console.log('\n🎉 Seeding selesai dengan sukses!');
+    console.log('🚀 Server siap di http://localhost:4000');
+    console.log('📘 Swagger docs: http://localhost:4000/api/docs\n');
     }
 
-    main()
-    .then(async () => {
-        await prisma.$disconnect();
-    })
-    .catch(async (e) => {
-        console.error('❌ Error during seeding:', e);
-        await prisma.$disconnect();
+main()
+    .catch((e) => {
+        console.error('❌ Terjadi kesalahan saat seeding:', e);
         process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
     });

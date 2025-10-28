@@ -5,7 +5,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AnnouncementsService {
     constructor(private prisma: PrismaService) {}
 
-    // Kepala sekolah membuat pengumuman
     async createAnnouncement(title: string, content: string, createdBy: string) {
         return this.prisma.announcement.create({
         data: {
@@ -16,14 +15,17 @@ export class AnnouncementsService {
         });
     }
 
-    // Semua role bisa melihat pengumuman
     async getAllAnnouncements() {
-        return this.prisma.announcement.findMany({
+    return this.prisma.announcement.findMany({
         orderBy: { createdAt: 'desc' },
-        });
+        include: {
+        createdByUser: {
+            select: { username: true, role: true },
+        },
+        },
+    });
     }
 
-    // Kepala sekolah menghapus pengumuman
     async deleteAnnouncement(id: string) {
         return this.prisma.announcement.delete({
         where: { id },
