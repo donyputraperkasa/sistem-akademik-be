@@ -27,4 +27,22 @@ export class StudentsService {
         },
         });
     }
+
+    // Mendapatkan daftar siswa yang diajar oleh guru tertentu
+    async getStudentsByTeacher(teacherId: string) {
+        return this.prisma.student.findMany({
+            where: {
+                grades: {
+                    some: {
+                        teacherId: teacherId,
+                    },
+                },
+            },
+            include: {
+                user: true,
+                grades: { include: { teacher: { include: { user: true } } } },
+                attendances: true,
+            },
+        });
+    }
 }
